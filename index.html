@@ -925,7 +925,7 @@ function rolloverCheck(){
   const today=ds();
   if(S.lastOpened!==today){
     const gap=Math.max(1,dayDiff(S.lastOpened,today));
-    S.tasks=S.tasks.filter(t=>!(t.quick&&t.done&&!t.archived));   // việc vặt (Xong nhanh) tự xoá khi sang ngày mới
+    S.tasks=S.tasks.filter(t=>!(t.quick&&t.done));   // việc vặt (Xong nhanh) tự xoá khi sang ngày mới — kể cả đã vào Hoàn thành
     let carried=0;
     S.tasks.forEach(t=>{
       if(t.today && !t.done){ t.rolledDays=(t.rolledDays||0)+gap; carried++; }      // cuốn chiếu
@@ -1202,7 +1202,7 @@ function wireCard(el,t){
     if(act==="openlink")node.onclick=e=>{e.stopPropagation();};   // để thẻ <a> tự mở link
     if(act==="archive")node.onclick=e=>{e.stopPropagation();const np=el.querySelector(".done-note");if(np&&np.dataset.built)collectRefl(np,t);archiveTask(t,true);};
     if(act==="notetoggle")node.onclick=e=>{e.stopPropagation();const np=el.querySelector(".done-note");if(!np)return;if(!np.dataset.built){buildNotePanel(np,t);np.dataset.built="1";np.hidden=false;node.textContent="📝 Ghi chú ▴";}else{np.hidden=!np.hidden;node.textContent=np.hidden?"📝 Ghi chú ▾":"📝 Ghi chú ▴";}};
-    if(act==="quickdone")node.onclick=e=>{e.stopPropagation();t.quick=true;t.done=true;render();toast("✓ Việc vặt — sẽ tự xoá cuối ngày");};
+    if(act==="quickdone")node.onclick=e=>{e.stopPropagation();t.quick=true;t.done=true;t.archived=true;t.completedAt=nowISO();render();toast("✓ Xong nhanh → Hoàn thành · tự xoá cuối ngày");};
     if(act==="unquick")node.onclick=e=>{e.stopPropagation();t.quick=false;render();};
     if(act==="clearroll")node.onclick=e=>{e.stopPropagation();t.rolledDays=0;render();};
     if(act==="expand")node.onclick=e=>{e.stopPropagation();t._open=!t._open;render();};
@@ -1410,6 +1410,7 @@ const CAL_MON=["Th1","Th2","Th3","Th4","Th5","Th6","Th7","Th8","Th9","Th10","Th1
 const WD7=["T2","T3","T4","T5","T6","T7","CN"];                 // tuần bắt đầu Thứ 2
 const DOWFULL=["Chủ nhật","Thứ Hai","Thứ Ba","Thứ Tư","Thứ Năm","Thứ Sáu","Thứ Bảy"];
 let calAnchor=ds();                                            // ngày đang xem (reset về hôm nay mỗi lần mở app)
+let calCenterNext=true;                                        // true = lần render kế tiếp căn giữa về giờ hiện tại (mở/refresh/đổi ngày)
 function parseWeekDate(when){                                  // đoán ngày từ "9/6" / "T7" … (dùng cho migrate v10)
   if(!when)return "";
   const dm=when.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
@@ -1502,9 +1503,19 @@ function calYearHTML(anchor){
   return html+`</div>`;
 }
 function renderCalInto(host,mode,anchor,compact){if(!host)return;
+  const oldSc=host.querySelector(".cg-scroll"),keep=oldSc?oldSc.scrollTop:null;   // giữ vị trí cuộn qua các lần re-render (interval/edit)
   host.innerHTML = mode==="month"?calMonthHTML(anchor):mode==="year"?calYearHTML(anchor):calTimedHTML(mode,anchor,compact);
-  wireCal(host);}
-function goCal(day,mode){calAnchor=day||calAnchor;if(mode)S.calMode=mode;setView("cal");renderCalPage();}
+  wireCal(host);
+  const sc=host.querySelector(".cg-scroll");
+  if(sc&&(mode==="day"||mode==="week")){
+    const days=mode==="week"?weekDaysOf(anchor):[anchor], todayVis=(ds()>=days[0]&&ds()<=days[days.length-1]);
+    if(calCenterNext&&todayVis&&sc.clientHeight){   // mở/refresh/đổi ngày → căn giữa về GIỜ HIỆN TẠI
+      const n=new Date(),nm=n.getHours()*60+n.getMinutes();
+      sc.scrollTop=Math.max(0,(clampMin(nm)-START_MIN)/60*PXH - sc.clientHeight/2);
+      calCenterNext=false;   // đã căn giữa → tắt cờ (interval 60s không bật lại nên không giật khi đã cuộn tay)
+    } else if(keep!=null) sc.scrollTop=keep;
+  }}
+function goCal(day,mode){calCenterNext=true;calAnchor=day||calAnchor;if(mode)S.calMode=mode;setView("cal");renderCalPage();}
 function calApplyDrop(data,day,min){
   let kind,id;
   if(data.calId){const p=data.calId;kind=p.startsWith("c_")?"event":p.startsWith("p_")?"project":p.startsWith("d_")?"deadline":"task";id=p.slice(2);}
@@ -1551,7 +1562,7 @@ function renderCalPage(){const host=$("#calPage");if(!host)return;
   const t=$("#calTitle");if(t)t.textContent=calTitle();
   $$("#calSeg button").forEach(b=>b.classList.toggle("on",b.dataset.m===S.calMode));
   renderCalInto(host,S.calMode,calAnchor,false);}
-function calNav(dir){const m=S.calMode;
+function calNav(dir){const m=S.calMode;calCenterNext=true;
   if(m==="day")calAnchor=addDays(calAnchor,dir);
   else if(m==="week")calAnchor=addDays(calAnchor,dir*7);
   else if(m==="month"){const d=new Date(calAnchor+"T00:00:00");d.setMonth(d.getMonth()+dir);calAnchor=ds(d);}
@@ -1582,7 +1593,7 @@ function renderDeskCal(){
   const body=$("#deskCalBody");if(!body)return;
   if(!open){body.innerHTML=deskAgendaHTML();wireCal(body);const mo=$(".dc-more",body);if(mo)mo.onclick=()=>{S.deskCalOpen=true;save();renderDeskCal();};}
   else renderCalInto(body,dm,calAnchor,true);}
-function deskNav(dir){const dm=S.deskCalMode||"week";
+function deskNav(dir){const dm=S.deskCalMode||"week";calCenterNext=true;
   if(dm==="day")calAnchor=addDays(calAnchor,dir);
   else if(dm==="month"){const d=new Date(calAnchor+"T00:00:00");d.setMonth(d.getMonth()+dir);calAnchor=ds(d);}
   else calAnchor=addDays(calAnchor,dir*7);
@@ -1622,8 +1633,7 @@ function openEventModal(c,presetDay,presetStar){
   if(!isNew)$("#evDel").onclick=()=>{if(confirm("Xoá “"+c.text+"”?")){S.calendar=S.calendar.filter(x=>x.id!==c.id);save();closeModal();render();}};
   $("#evSave").onclick=()=>{const text=$("#evText").value.trim();if(!text){toast("Nhập tên đã nhé");return;}
     let d=$("#evDate").value||calAnchor,en=$("#evEnd").value||"";if(en&&en<d){const z=en;en=d;d=z;}
-    const multi=(en&&en!==d);   // nhiều ngày → bỏ giờ để hiện 1 thanh liền mạch (không lặp khối giờ mỗi ngày)
-    const o={id:c.id,date:d,end:en,time:multi?"":clampHM($("#evTime").value),endTime:multi?"":clampHM($("#evEndTime").value),text,star:$("#evStar").checked,from:c.from||"manual"};
+    const o={id:c.id,date:d,end:en,time:clampHM($("#evTime").value),endTime:clampHM($("#evEndTime").value),text,star:$("#evStar").checked,from:c.from||"manual"};
     const i=S.calendar.findIndex(x=>x.id===c.id);if(i>=0)S.calendar[i]=o;else S.calendar.push(o);
     save();closeModal();render();toast("✓ Đã lưu lịch");};
   setTimeout(()=>{const el=$("#evText");if(el)el.focus();},30);}
@@ -1677,22 +1687,22 @@ function setView(v){
   const tc=$("#tabCal");if(tc)tc.classList.toggle("on",v==="cal");
   save();
 }
-$("#tabDesk").onclick=()=>{setView("desk");renderDeskCal();};
+$("#tabDesk").onclick=()=>{calCenterNext=true;setView("desk");renderDeskCal();};
 $("#tabProj").onclick=()=>{setView("proj");renderProjects();};
 $("#tabDone").onclick=()=>{setView("done");renderDone();};
 $("#tabJournal").onclick=()=>{setView("journal");renderJournal();};
-const _tabCal=$("#tabCal");if(_tabCal)_tabCal.onclick=()=>{setView("cal");renderCalPage();};
+const _tabCal=$("#tabCal");if(_tabCal)_tabCal.onclick=()=>{calCenterNext=true;setView("cal");renderCalPage();};
 /* nút điều khiển tab Lịch + panel Lịch tuần (desk) */
 (()=>{
   const wire=(id,fn)=>{const el=$("#"+id);if(el)el.onclick=fn;};
-  $$("#calSeg button").forEach(b=>b.onclick=()=>{S.calMode=b.dataset.m;save();renderCalPage();});
+  $$("#calSeg button").forEach(b=>b.onclick=()=>{S.calMode=b.dataset.m;calCenterNext=true;save();renderCalPage();});
   wire("calPrev",()=>calNav(-1)); wire("calNext",()=>calNav(1));
-  wire("calToday",()=>{calAnchor=ds();renderCalPage();});
+  wire("calToday",()=>{calCenterNext=true;calAnchor=ds();renderCalPage();});
   wire("calAdd",()=>openAddChooser(calAnchor));
-  wire("dcToggle",()=>{S.deskCalOpen=!(S.deskCalOpen!==false);save();renderDeskCal();});
+  wire("dcToggle",()=>{S.deskCalOpen=!(S.deskCalOpen!==false);calCenterNext=true;save();renderDeskCal();});
   wire("dcPrev",()=>deskNav(-1)); wire("dcNext",()=>deskNav(1));
-  wire("dcToday",()=>{calAnchor=ds();renderDeskCal();});
-  $$("#dcSeg button").forEach(b=>b.onclick=()=>{S.deskCalMode=b.dataset.dm;save();renderDeskCal();});
+  wire("dcToday",()=>{calCenterNext=true;calAnchor=ds();renderDeskCal();});
+  $$("#dcSeg button").forEach(b=>b.onclick=()=>{S.deskCalMode=b.dataset.dm;calCenterNext=true;save();renderDeskCal();});
   wire("dcAdd",()=>openAddChooser(calAnchor));
   wire("dcOpenTab",()=>goCal(calAnchor));   // giữ nguyên chế độ xem của tab Lịch (ngày/tuần/tháng/năm)
   wire("addTuan",()=>openEventModal(null,ds(),true));            // thêm từ Tuần này → ★ quan trọng mặc định
