@@ -1438,11 +1438,15 @@ function collectEvents(d1,d2){
   const out=[];
   S.calendar.forEach(c=>{const a=c.date,b=c.end||c.date;if(!a||b<d1||a>d2)return;
     out.push({id:"c_"+c.id,kind:"event",day:a,endDay:b,time:c.time||"",endTime:c.endTime||"",title:c.text,star:!!c.star,done:false,color:null,ref:c});});
-  S.tasks.forEach(t=>{if(t.archived)return;
-    if(t.date&&t.date>=d1&&t.date<=d2)
-      out.push({id:"t_"+t.id,kind:"task",day:t.date,endDay:t.date,time:t.start||"",endTime:t.end||"",title:t.text,star:false,done:t.done,color:t.color,ref:t});
-    else if(!t.date&&t.today&&hm2min(t.start)!==null&&ds()>=d1&&ds()<=d2)
-      out.push({id:"t_"+t.id,kind:"task",day:ds(),endDay:ds(),time:t.start,endTime:t.end||"",title:t.text,star:false,done:t.done,color:t.color,ref:t});});
+  S.tasks.forEach(t=>{
+    const timed=hm2min(t.start)!==null;
+    // ngày trên lịch: ưu tiên ngày hẹn → ngày hoàn thành (đã lưu kho) → hôm nay (đang ở Hôm nay)
+    const day=t.date||(t.archived&&t.completedAt?t.completedAt.slice(0,10):(t.today?ds():""));
+    if(!day) return;
+    if(!timed&&!t.date&&!t.archived) return;   // việc Hôm nay chưa đặt giờ & chưa hẹn & chưa xong → không lên grid (giữ gọn)
+    if(day<d1||day>d2) return;
+    // việc ĐÃ HOÀN THÀNH vẫn hiện trên lịch (done) để đo hiệu quả ngày; chỉ rời khỏi danh sách Hôm nay/Tuần này
+    out.push({id:"t_"+t.id,kind:"task",day,endDay:day,time:t.start||"",endTime:t.end||"",title:t.text,star:false,done:t.done,color:t.color,ref:t});});
   S.tasks.forEach(t=>{if(!t.archived&&t.due&&t.due!==t.date&&t.due>=d1&&t.due<=d2)
     out.push({id:"d_"+t.id,kind:"deadline",day:t.due,endDay:t.due,time:"",endTime:"",title:(t.pid?"🚀 ":"⏳ ")+t.text,star:false,done:t.done,color:t.color,ref:t});});
   S.projects.forEach(p=>{if(p.deadline&&p.deadline>=d1&&p.deadline<=d2)   // hạn tổng của dự án cũng lên lịch
@@ -1570,9 +1574,9 @@ function calNav(dir){const m=S.calMode;calCenterNext=true;
   renderCalPage();}
 function deskAgendaHTML(){
   const today=ds(),far=addDays(today,60);
-  const all=collectEvents(today,far);
+  const all=collectEvents(today,far).filter(e=>!e.done);   // agenda nhắc việc CHƯA xong (việc xong vẫn ở trên lịch)
   let evs=all.filter(e=>e.star||e.kind==="deadline");   // ★ quan trọng + mọi deadline (🏁/🚀/⏳)
-  collectEvents(today,today).forEach(e=>{if(!evs.some(s=>s.id===e.id))evs.push(e);});   // luôn gồm việc/lịch HÔM NAY (đỡ sót)
+  collectEvents(today,today).forEach(e=>{if(!e.done&&!evs.some(s=>s.id===e.id))evs.push(e);});   // luôn gồm việc/lịch HÔM NAY chưa xong (đỡ sót)
   evs.sort((a,b)=>a.day<b.day?-1:a.day>b.day?1:((a.time||"99")<(b.time||"99")?-1:1));
   const shown=new Set(evs.slice(0,14).map(e=>e.id));
   const hidden=all.filter(e=>!shown.has(e.id)).length;
@@ -1610,13 +1614,14 @@ function wireCalRows(box){$$(".crow",box).forEach(r=>r.onclick=()=>openCalItem(r
 function renderTuanNay(){const box=$("#tuanNay");if(!box)return;
   const today=ds(),sun=addDays(weekMonday(),6);
   const list=collectEvents(today,sun)
+    .filter(e=>!e.done)   // việc đã hoàn thành rời danh sách (vẫn nằm trên lịch)
     .filter(e=>!(e.day===today&&e.kind==="task"&&e.ref&&e.ref.today))   // việc hôm nay đã hiện ở "Hôm nay" → khỏi lặp; lịch/mốc hôm nay vẫn hiện
     .sort((a,b)=>a.day<b.day?-1:a.day>b.day?1:((a.time||"")<(b.time||"")?-1:1));
   box.innerHTML=list.length?list.map(calRow).join(""):'<div class="empty">Chưa có lịch tuần này. Bấm ＋ để thêm (mặc định ★ quan trọng).</div>';
   wireCalRows(box);}
 function renderMoc(){const box=$("#mocList");if(!box)return;
   const mocStart=addDays(addDays(weekMonday(),6),1),far=addDays(ds(),180);   // từ thứ 2 tuần sau → +180d
-  const list=collectEvents(mocStart,far).filter(e=>e.day>=mocStart).sort((a,b)=>a.day<b.day?-1:1);   // chỉ tính theo NGÀY BẮT ĐẦU → không trùng với "Tuần này"
+  const list=collectEvents(mocStart,far).filter(e=>e.day>=mocStart&&!e.done).sort((a,b)=>a.day<b.day?-1:1);   // theo NGÀY BẮT ĐẦU, bỏ việc đã xong → không trùng "Tuần này"
   box.innerHTML=list.length?list.map(calRow).join(""):'<div class="empty">Chưa có mốc xa. Deadline dự án + lịch tương lai sẽ hiện ở đây.</div>';
   wireCalRows(box);}
 function openEventModal(c,presetDay,presetStar){
