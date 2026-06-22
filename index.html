@@ -365,6 +365,10 @@
   .badge.tlink{color:#fff;background:var(--m3);text-decoration:none}
   .badge.tlink:hover{filter:brightness(1.08)}
   .badge.tnote{cursor:pointer;background:var(--accent-soft);color:var(--accent)}
+  .meta-row{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start;margin-top:5px}
+  .addmeta{font-size:12px;font-weight:600;color:var(--muted);padding:5px 10px;border:1px dashed var(--border);border-radius:8px;cursor:pointer;flex:0 0 auto}
+  .addmeta:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+  .meta-row .tnote-link,.meta-row .tnote-text{margin-top:0;flex:1 1 100%}
   .qt-subs{display:flex;flex-direction:column;gap:5px;margin:2px 0}
   .qt-subs .sub{border:1px solid var(--border);border-radius:8px;padding:5px 8px}
   .qt-subs .qs-t{flex:1;outline:none}
@@ -1190,11 +1194,19 @@ function taskCard(t,view){
           <span class="del" data-act="subdel">✕</span>
         </div>`).join("")}
       <div class="addsub"><span>＋</span><input placeholder="Thêm việc con… (Enter)" data-act="addsub"></div>
-      <input class="tnote-link" data-act="link" placeholder="🔗 Dán link (Drive · bài học · tài liệu…)" value="${esc(t.link||"")}">
-      <textarea class="tnote-text" data-act="note" rows="2" placeholder="📝 Ghi chú việc…">${esc(t.note||"")}</textarea>
+      <div class="meta-row">
+        ${t.link?`<input class="tnote-link" data-act="link" placeholder="🔗 Dán link (Drive · bài học · tài liệu…)" value="${esc(t.link)}">`:`<button class="addmeta" data-act="addlink">🔗 Thêm link</button>`}
+        ${(t.note&&t.note.trim())?`<textarea class="tnote-text" data-act="note" rows="2" placeholder="📝 Ghi chú việc…">${esc(t.note)}</textarea>`:`<button class="addmeta" data-act="addnote">📝 Thêm ghi chú</button>`}
+      </div>
     </div>`;
   wireCard(el,t);
   return el;
+}
+function metaBlur(t,el,kind){   // lưu link/note; rỗng → render lại để ẩn ô (trở về nút "Thêm…")
+  const v=kind==="link"?normLink(el.value):el.value.trim(), cur=kind==="link"?(t.link||""):(t.note||"");
+  if(v===cur)return;
+  t[kind]=v;save();
+  if(!v)render(); else if(kind==="link")el.value=v;
 }
 function wireCard(el,t){
   el.querySelectorAll("[data-act]").forEach(node=>{
@@ -1205,8 +1217,10 @@ function wireCard(el,t){
     if(act==="sprint")node.onclick=e=>{e.stopPropagation();openSprint(t.id);};
     if(act==="time")node.onclick=e=>{e.stopPropagation();openTimeModal(t);};
     if(act==="tag")node.onclick=e=>{e.stopPropagation();openTagPicker(t);};
-    if(act==="link")node.onblur=()=>{const v=normLink(node.value);if(v!==(t.link||"")){t.link=v;node.value=v;save();}};   // không render() để khỏi mất focus
-    if(act==="note")node.onblur=()=>{const v=node.value.trim();if(v!==(t.note||"")){t.note=v;save();}};
+    if(act==="link")node.onblur=()=>metaBlur(t,node,"link");
+    if(act==="note")node.onblur=()=>metaBlur(t,node,"note");
+    if(act==="addlink")node.onclick=e=>{e.stopPropagation();const inp=document.createElement("input");inp.className="tnote-link";inp.placeholder="🔗 Dán link (Drive · bài học · tài liệu…)";inp.onblur=()=>metaBlur(t,inp,"link");node.replaceWith(inp);inp.focus();};
+    if(act==="addnote")node.onclick=e=>{e.stopPropagation();const ta=document.createElement("textarea");ta.className="tnote-text";ta.rows=2;ta.placeholder="📝 Ghi chú việc…";ta.onblur=()=>metaBlur(t,ta,"note");node.replaceWith(ta);ta.focus();};
     if(act==="openlink")node.onclick=e=>{e.stopPropagation();};   // để thẻ <a> tự mở link
     if(act==="archive")node.onclick=e=>{e.stopPropagation();const np=el.querySelector(".done-note");if(np&&np.dataset.built)collectRefl(np,t);archiveTask(t,true);};
     if(act==="notetoggle")node.onclick=e=>{e.stopPropagation();const np=el.querySelector(".done-note");if(!np)return;if(!np.dataset.built){buildNotePanel(np,t);np.dataset.built="1";np.hidden=false;node.textContent="📝 Ghi chú ▴";}else{np.hidden=!np.hidden;node.textContent=np.hidden?"📝 Ghi chú ▾":"📝 Ghi chú ▴";}};
