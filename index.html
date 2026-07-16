@@ -32,6 +32,9 @@
   button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
   input,textarea{font-family:inherit;font-size:14px;color:var(--text)}
   ::placeholder{color:var(--muted);opacity:.7}
+  /* Accessibility polish (ui-ux-pro-max checklist): viền focus rõ khi dùng bàn phím, tôn trọng reduced-motion */
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:5px}
+  @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 
   /* ---------- Header ---------- */
   header{
@@ -56,7 +59,7 @@
   #viewDesk{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start}
   #viewProj{display:block}
   .main-col,.side-col{display:flex;flex-direction:column;gap:18px;min-width:0}
-  .top-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:18px;align-items:start}  /* Hôm nay ~58% · Lịch ~42% (Hôm nay −15%, Lịch +15%) */
+  .top-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:18px;align-items:stretch}  /* Hôm nay ~58% · Lịch ~42%; stretch = 2 thẻ cao bằng nhau, khoảng dư nằm gọn trong thẻ (tránh hở nền) */
   @media(max-width:1180px){#viewDesk{grid-template-columns:minmax(0,1fr) 300px}}
   @media(max-width:900px){#viewDesk{grid-template-columns:1fr}.top-row{grid-template-columns:1fr}}
   .col-left,.col-mid,.col-right{display:flex;flex-direction:column;gap:18px;min-width:0}
@@ -168,9 +171,8 @@
   .vtabs button{padding:5px 13px;border-radius:8px;font-weight:700;font-size:13px;color:var(--muted);transition:.15s}
   .vtabs button.on{background:var(--accent-soft);color:var(--accent)}
   @media(max-width:560px){
-    .vtabs{width:100%;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
-    .vtabs::-webkit-scrollbar{display:none}
-    .vtabs button{flex-shrink:0;white-space:nowrap;padding:6px 11px;font-size:12px}
+    .vtabs{width:100%;flex-wrap:wrap;justify-content:center}
+    .vtabs button{flex:0 0 auto;white-space:nowrap;padding:6px 10px;font-size:12px}
   }
   .sosbar{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--border);border-radius:11px;padding:4px 8px 4px 12px}
   .sosbar .sostask{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600;color:var(--muted)}
@@ -289,10 +291,10 @@
   .cg-head{display:flex;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--card);z-index:5}
   .cg-corner{width:46px;flex-shrink:0}
   .cg-hcols{flex:1;display:flex}
-  .cg-dh{flex:1;text-align:center;padding:3px 2px;cursor:pointer;border-left:1px solid var(--border);line-height:1.2;white-space:nowrap}
+  .cg-dh{flex:1;min-width:0;text-align:center;padding:5px 2px;cursor:pointer;border-left:1px solid var(--border);line-height:1.15}
   .cg-dh:hover{background:var(--accent-soft)}
-  .cg-dh b{font-size:11px;font-weight:800;color:var(--muted)}
-  .cg-dn{font-size:12px;font-weight:700;color:var(--text);margin-left:3px}
+  .cg-dh b{display:block;font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.2px;text-transform:uppercase}
+  .cg-dn{display:block;font-size:13px;font-weight:800;color:var(--text);margin:1px 0 0}
   .cg-dh.today{background:var(--accent-soft)} .cg-dh.today b,.cg-dh.today .cg-dn{color:var(--accent)}
   .cg-wrap{display:flex;flex-direction:column}
   .cg-day1{max-width:740px;margin:0 auto;width:100%;border-right:1px solid var(--border)}
@@ -379,6 +381,19 @@
   .addmeta{font-size:12px;font-weight:600;color:var(--muted);padding:5px 10px;border:1px dashed var(--border);border-radius:8px;cursor:pointer;flex:0 0 auto}
   .addmeta:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
   .meta-row .tnote-link,.meta-row .tnote-text{margin-top:0;flex:1 1 100%}
+  /* meta gọn: nút icon thêm link/ghi chú nằm cuối hàng "việc con" + hàng link/ghi chú có nút xoá */
+  .metaicon{flex:0 0 auto;width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;color:var(--muted);border:1px solid var(--border);background:var(--card)}
+  .metaicon:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .meta-item{display:flex;align-items:flex-start;gap:7px;margin-top:6px}
+  .meta-item .mi-ic{flex:0 0 auto;font-size:13px;padding-top:6px;opacity:.8}
+  .meta-item .tnote-link,.meta-item .tnote-text{margin-top:0;flex:1 1 auto;min-width:0}
+  .meta-del{flex:0 0 auto;width:24px;height:26px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);cursor:pointer}
+  .meta-del:hover{background:var(--m1-bg);color:var(--m1)}
+  /* Lịch desk: khối cuộn giãn đầy chiều cao thẻ → đồng bộ với panel HÔM NAY cạnh nó (min để không quá ngắn) */
+  .deskcal{display:flex;flex-direction:column}
+  .deskcal>.panel-b{flex:1;min-height:0;display:flex;flex-direction:column}
+  .deskcal .cg-wrap{flex:1;min-height:0}
+  .cg-scroll.cg-fill{flex:1 1 0;min-height:368px;max-height:none;overflow-y:auto}  /* sàn ~8 giờ (8×46px); HÔM NAY dài hơn → giãn theo */
   .qt-subs{display:flex;flex-direction:column;gap:5px;margin:2px 0}
   .qt-subs .sub{border:1px solid var(--border);border-radius:8px;padding:5px 8px}
   .qt-subs .qs-t{flex:1;outline:none}
@@ -1188,6 +1203,8 @@ function taskCard(t,view){
     <div class="tmeta">
       ${timeChip}${linkChip}${noteChip}${sunBadge}${rollBadge}${projBadge}${tagsHtml(t.tags)}
       <button class="iconbtn tagbtn" data-act="tag" title="Gắn tag">🏷️</button>
+      ${t.link?``:`<button class="iconbtn" data-act="addlink" title="Gắn link">🔗</button>`}
+      ${(t.note&&t.note.trim())?``:`<button class="iconbtn" data-act="addnote" title="Thêm ghi chú">📝</button>`}
       ${subCount?`<div class="pbar mini" style="width:80px"><span style="width:${pct}%"></span></div><span class="tomato">${subDone}/${subCount}</span>`:""}
       ${t.minutes?`<span class="tomato" title="${t.actual||0} phiên Pomo">⏱ ${fmtMin(t.minutes)}</span>`:""}
     </div>
@@ -1205,17 +1222,16 @@ function taskCard(t,view){
           <span class="del" data-act="subdel">✕</span>
         </div>`).join("")}
       <div class="addsub"><span>＋</span><input placeholder="Thêm việc con… (Enter)" data-act="addsub"></div>
-      <div class="meta-row">
-        ${t.link?`<input class="tnote-link" data-act="link" placeholder="🔗 Dán link (Drive · bài học · tài liệu…)" value="${esc(t.link)}">`:`<button class="addmeta" data-act="addlink">🔗 Thêm link</button>`}
-        ${(t.note&&t.note.trim())?`<textarea class="tnote-text" data-act="note" rows="2" placeholder="📝 Ghi chú việc…">${esc(t.note)}</textarea>`:`<button class="addmeta" data-act="addnote">📝 Thêm ghi chú</button>`}
-      </div>
+      ${(t.link||t._al)?`<div class="meta-item"><span class="mi-ic">🔗</span><input class="tnote-link" data-act="link" placeholder="Dán link (Drive · bài học · tài liệu…)" value="${esc(t.link||'')}"><span class="meta-del" data-act="dellink" title="Xoá link">✕</span></div>`:``}
+      ${((t.note&&t.note.trim())||t._an)?`<div class="meta-item"><span class="mi-ic">📝</span><textarea class="tnote-text" data-act="note" rows="2" placeholder="Ghi chú việc…">${esc(t.note||'')}</textarea><span class="meta-del" data-act="delnote" title="Xoá ghi chú">✕</span></div>`:``}
     </div>`;
   wireCard(el,t);
   return el;
 }
-function metaBlur(t,el,kind){   // lưu link/note; rỗng → render lại để ẩn ô (trở về nút "Thêm…")
+function metaBlur(t,el,kind){   // lưu link/note; rỗng → về nút icon "Thêm…"
   const v=kind==="link"?normLink(el.value):el.value.trim(), cur=kind==="link"?(t.link||""):(t.note||"");
-  if(v===cur)return;
+  if(kind==="link")t._al=0; else t._an=0;
+  if(v===cur){ if(!v)render(); return; }
   t[kind]=v;save();
   if(!v)render(); else if(kind==="link")el.value=v;
 }
@@ -1230,8 +1246,10 @@ function wireCard(el,t){
     if(act==="tag")node.onclick=e=>{e.stopPropagation();openTagPicker(t);};
     if(act==="link")node.onblur=()=>metaBlur(t,node,"link");
     if(act==="note")node.onblur=()=>metaBlur(t,node,"note");
-    if(act==="addlink")node.onclick=e=>{e.stopPropagation();const inp=document.createElement("input");inp.className="tnote-link";inp.placeholder="🔗 Dán link (Drive · bài học · tài liệu…)";inp.onblur=()=>metaBlur(t,inp,"link");node.replaceWith(inp);inp.focus();};
-    if(act==="addnote")node.onclick=e=>{e.stopPropagation();const ta=document.createElement("textarea");ta.className="tnote-text";ta.rows=2;ta.placeholder="📝 Ghi chú việc…";ta.onblur=()=>metaBlur(t,ta,"note");node.replaceWith(ta);ta.focus();};
+    if(act==="addlink")node.onclick=e=>{e.stopPropagation();t._al=1;t._open=true;render();setTimeout(()=>{const i=document.querySelector(`[data-id="${t.id}"] [data-act="link"]`);if(i)i.focus();},30);};
+    if(act==="addnote")node.onclick=e=>{e.stopPropagation();t._an=1;t._open=true;render();setTimeout(()=>{const i=document.querySelector(`[data-id="${t.id}"] [data-act="note"]`);if(i)i.focus();},30);};
+    if(act==="dellink")node.onclick=e=>{e.stopPropagation();t.link="";t._al=0;save();render();};
+    if(act==="delnote")node.onclick=e=>{e.stopPropagation();t.note="";t._an=0;save();render();};
     if(act==="openlink")node.onclick=e=>{e.stopPropagation();};   // để thẻ <a> tự mở link
     if(act==="archive")node.onclick=e=>{e.stopPropagation();const np=el.querySelector(".done-note");if(np&&np.dataset.built)collectRefl(np,t);archiveTask(t,true);};
     if(act==="notetoggle")node.onclick=e=>{e.stopPropagation();const np=el.querySelector(".done-note");if(!np)return;if(!np.dataset.built){buildNotePanel(np,t);np.dataset.built="1";np.hidden=false;node.textContent="📝 Ghi chú ▴";}else{np.hidden=!np.hidden;node.textContent=np.hidden?"📝 Ghi chú ▾":"📝 Ghi chú ▴";}};
@@ -1542,7 +1560,7 @@ function calTimedHTML(mode,anchor,compact){
       return `<div class="cg-ev ${o.e.done?'done':''} ${comp?'compact':''}" draggable="true" data-ev="${o.e.id}" style="top:${top}px;height:${hgt}px;left:calc(${l}% + 1px);width:calc(${w}% - 3px);--c:${evColor(o.e)}" title="${esc(o.e.title)} ${min2hm(o.s)}–${min2hm(o.en)}">${inner}</div>`;}).join("");
     cols+=`<div class="cg-col" data-day="${d}" title="Bấm ô trống để thêm việc · kéo việc vào đây để xếp giờ">${blocks}${d===today?nowLineHTML():""}</div>`;});
   const bodyH=(END_H-START_H)*PXH;
-  const scroll=`<div class="cg-scroll"${compact?' style="max-height:44vh"':''}><div class="cg-body" style="height:${bodyH}px"><div class="cg-hours">${hours}</div><div class="cg-cols">${cols}</div></div></div>`;
+  const scroll=`<div class="cg-scroll${compact?' cg-fill':''}"><div class="cg-body" style="height:${bodyH}px"><div class="cg-hours">${hours}</div><div class="cg-cols">${cols}</div></div></div>`;
   return `<div class="cg-wrap${mode==="day"?" cg-day1":""}">`+head+scroll+`</div>`;
 }
 function calMonthHTML(anchor){
