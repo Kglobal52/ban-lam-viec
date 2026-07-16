@@ -1203,8 +1203,6 @@ function taskCard(t,view){
     <div class="tmeta">
       ${timeChip}${linkChip}${noteChip}${sunBadge}${rollBadge}${projBadge}${tagsHtml(t.tags)}
       <button class="iconbtn tagbtn" data-act="tag" title="Gắn tag">🏷️</button>
-      ${t.link?``:`<button class="iconbtn" data-act="addlink" title="Gắn link">🔗</button>`}
-      ${(t.note&&t.note.trim())?``:`<button class="iconbtn" data-act="addnote" title="Thêm ghi chú">📝</button>`}
       ${subCount?`<div class="pbar mini" style="width:80px"><span style="width:${pct}%"></span></div><span class="tomato">${subDone}/${subCount}</span>`:""}
       ${t.minutes?`<span class="tomato" title="${t.actual||0} phiên Pomo">⏱ ${fmtMin(t.minutes)}</span>`:""}
     </div>
@@ -1221,7 +1219,10 @@ function taskCard(t,view){
           <span contenteditable="true" data-act="subedit">${esc(s.text)}</span>
           <span class="del" data-act="subdel">✕</span>
         </div>`).join("")}
-      <div class="addsub"><span>＋</span><input placeholder="Thêm việc con… (Enter)" data-act="addsub"></div>
+      <div class="addsub"><span>＋</span><input placeholder="Thêm việc con… (Enter)" data-act="addsub">
+        ${(t.link||t._al)?``:`<button class="metaicon" data-act="addlink" title="Gắn link">🔗</button>`}
+        ${((t.note&&t.note.trim())||t._an)?``:`<button class="metaicon" data-act="addnote" title="Thêm ghi chú">📝</button>`}
+      </div>
       ${(t.link||t._al)?`<div class="meta-item"><span class="mi-ic">🔗</span><input class="tnote-link" data-act="link" placeholder="Dán link (Drive · bài học · tài liệu…)" value="${esc(t.link||'')}"><span class="meta-del" data-act="dellink" title="Xoá link">✕</span></div>`:``}
       ${((t.note&&t.note.trim())||t._an)?`<div class="meta-item"><span class="mi-ic">📝</span><textarea class="tnote-text" data-act="note" rows="2" placeholder="Ghi chú việc…">${esc(t.note||'')}</textarea><span class="meta-del" data-act="delnote" title="Xoá ghi chú">✕</span></div>`:``}
     </div>`;
